@@ -62,6 +62,8 @@ class Config:
     seed: int = 87234
     device: str = "cpu"
     dtype: jnp.dtype = jnp.float32
+    feature_probability: jax.Array = field(default_factory=lambda _: jnp.ones(1))
+    feature_importance: jax.Array = field(default_factory=lambda _: jnp.ones(1))
 
     def key(self):
         """JAX random key"""
@@ -94,7 +96,6 @@ class Model:
         return cls(w=w, b_final=b_final, activation=activation)
 
     def __call__(self, x):
-        print(x.shape)
         hidden = jnp.einsum("...if,ifh->...ih", x, self.w)
         out = jnp.einsum("...ih,ifh->...if", hidden, self.w)
         out = out + self.b_final
@@ -134,8 +135,8 @@ def loss_fn(model, x, importance):
     y_pred = model(x)
     error = (importance * (jnp.abs(x) - y_pred)**2)
     loss = einops.reduce(error, 'b i f -> i', 'mean').sum()
-    return loss
     #return jnp.mean(importance * (y_pred - x) ** 2, axis=(Axis.batch, Axis.hidden, Axis.feature)).sum()
+    return loss
 
 
 def optimize(model, data_generator, steps=10_000, print_freq=100, learning_rate=1e-3):
@@ -179,27 +180,27 @@ def optimize(model, data_generator, steps=10_000, print_freq=100, learning_rate=
     return trained_model, losses
 
 
+if __name__ == "__main__":
+    # %% [markdown]
+    # Let's run the first experiment
 
-# %% [markdown]
-# Let's run the first experiment
+    # %%
+    config = Config(n_instances=10, n_features=5, n_hidden=2)
 
-# %%
-config = Config(n_instances=10, n_features=5, n_hidden=2)
+    model = Model.from_config(config=config)
 
-model = Model.from_config(config=config)
+    axis = (0, 2)
+    probability = jnp.expand_dims(0.9 ** jnp.arange(config.n_instances), axis=axis)
+    importance = jnp.expand_dims(20 ** -jnp.linspace(0, 1, config.n_instances), axis=axis)
 
-axis = (0, 2)
-probability = jnp.expand_dims(0.9 ** jnp.arange(config.n_instances), axis=axis)
-importance = jnp.expand_dims(20 ** -jnp.linspace(0, 1, config.n_instances), axis=axis)
+    data_generator = DataGenerator(
+        n_features=config.n_features,
+        feature_probability=probability,
+        feature_importance=importance,
+        batch_size=1024,
+        key=jax.random.key(98923),
+    )
 
-data_generator = DataGenerator(
-    n_features=config.n_features,
-    feature_probability=probability,
-    feature_importance=importance,
-    batch_size=1024,
-    key=jax.random.key(98923),
-)
+    model_optimized = optimize(model=model, data_generator=data_generator)
 
-model_optimized = optimize(model=model, data_generator=data_generator)
-
-# %%
+    # %%
