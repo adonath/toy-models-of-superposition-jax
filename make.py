@@ -1,10 +1,9 @@
-# %% [markdown] 
-# # Toy Models of Superposition
-# This notebook is a replication of https://github.com/anthropics/toy-models-of-superposition/blob/main/toy_models.ipynb in JAX.
-# %%
+import logging
+import tomllib
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import partial
+from pathlib import Path
 
 import einops
 import jax
@@ -12,6 +11,10 @@ import optax
 from jax import numpy as jnp
 from jax.tree_util import register_dataclass
 from tqdm.autonotebook import trange
+
+log = logging.getLogger(__file__)
+
+PATH_BASE = Path(__file__).parent
 
 
 def define_registry(registry):
@@ -21,16 +24,13 @@ def define_registry(registry):
         if key not in registry:
             message = f"{key} is not a valid key, choose from {list(registry.keys())}"
             raise KeyError(message)
-        
-        return registry[key]
-        
-    return get_with_error
-    
 
-ACTIVATION = {
-    "relu": jax.nn.relu,
-    "gelu": jax.nn.gelu
-}
+        return registry[key]
+
+    return get_with_error
+
+
+ACTIVATION = {"relu": jax.nn.relu, "gelu": jax.nn.gelu}
 
 get_activation = define_registry(ACTIVATION)
 
@@ -41,18 +41,26 @@ INIT = {
 
 get_init = define_registry(INIT)
 
+
 class Axis(int, Enum):
     """Axis convention"""
+
     batch = 0
     instance = 1
     hidden = 2
     feature = 3
 
 
+def validate_key(data, key, validator):
+    """Validate a dict entry by applying a validator"""
+    if key in data:
+        data[key] = validator(data[key])
+
 
 @dataclass
 class Config:
     """Toy model config"""
+
     n_features: int
     n_hidden: int
     n_instances: int
@@ -69,11 +77,29 @@ class Config:
         """JAX random key"""
         return jax.random.key(self.seed)
 
+    @property
+    def result_filename(self):
+        """Result filename for a given config"""
+        return f"n-features-{self.n_features}"
 
-@partial(register_dataclass, data_fields=("w", "b_final"), meta_fields=("activation",)) 
+    @classmethod
+    def read(cls, filename):
+        """Read config from a TOML file"""
+
+        with open(filename, "rb") as f:
+            data = tomllib.load(f)
+
+        validate_key(data, "dtype", lambda _: getattr(jnp, _))
+        validate_key(data, "feature_probability", jnp.array)
+        validate_key(data, "feature_importance", jnp.array)
+        return cls(**data)
+
+
+@partial(register_dataclass, data_fields=("w", "b_final"), meta_fields=("activation",))
 @dataclass
 class Model:
     """Model"""
+
     w: jax.Array
     b_final: jax.Array
     activation: callable = field(default=jax.nn.relu, metadata={"static": True})
@@ -90,7 +116,9 @@ class Model:
         w = get_init(config.w_init)(key=config.key(), shape=shape, dtype=config.dtype)
 
         shape = (config.n_instances, config.n_features)
-        b_final = get_init(config.b_init)(key=config.key(), shape=shape, dtype=config.dtype)
+        b_final = get_init(config.b_init)(
+            key=config.key(), shape=shape, dtype=config.dtype
+        )
 
         activation = get_activation(config.activation)
         return cls(w=w, b_final=b_final, activation=activation)
@@ -102,10 +130,18 @@ class Model:
         out = self.activation(out)
         return out
 
+    @classmethod
+    def read(cls, filename):
+        pass
+
+    def write(self, filename):
+        pass
+
 
 @dataclass
 class DataGenerator:
     """Data generator"""
+
     n_features: int
     feature_probability: jax.Array
     feature_importance: jax.Array
@@ -115,16 +151,18 @@ class DataGenerator:
 
     def __iter__(self):
         key = self.key
-        
+
         while True:
             n_instances = self.feature_probability.shape[Axis.instance]
             shape = (self.batch_size, n_instances, self.n_features)
-            
+
             key, subkey = jax.random.split(key)
             features = jax.random.uniform(key=subkey, shape=shape)
 
             key, subkey = jax.random.split(key)
-            sparsify = jax.random.bernoulli(key=subkey, p=self.feature_probability, shape=shape)
+            sparsify = jax.random.bernoulli(
+                key=subkey, p=self.feature_probability, shape=shape
+            )
 
             features = features.at[sparsify].set(0)
             yield features
@@ -133,15 +171,15 @@ class DataGenerator:
 def loss_fn(model, x, importance):
     """Calculate MSE loss"""
     y_pred = model(x)
-    error = (importance * (jnp.abs(x) - y_pred)**2)
-    loss = einops.reduce(error, 'b i f -> i', 'mean').sum()
-    #return jnp.mean(importance * (y_pred - x) ** 2, axis=(Axis.batch, Axis.hidden, Axis.feature)).sum()
+    error = importance * (jnp.abs(x) - y_pred) ** 2
+    loss = einops.reduce(error, "b i f -> i", "mean").sum()
+    # return jnp.mean(importance * (y_pred - x) ** 2, axis=(Axis.batch, Axis.hidden, Axis.feature)).sum()
     return loss
 
 
 def optimize(model, data_generator, steps=10_000, print_freq=100, learning_rate=1e-3):
     """Optimize model"""
-  # Initialize optimizer
+    # Initialize optimizer
     optimizer = optax.adamw(learning_rate=learning_rate)
     opt_state = optimizer.init(model)
 
@@ -155,12 +193,12 @@ def optimize(model, data_generator, steps=10_000, print_freq=100, learning_rate=
         loss, grads = jax.value_and_grad(loss_fn)(model, batch, importance)
         updates, new_opt_state = optimizer.update(grads, opt_state, model)
         new_model = optax.apply_updates(model, updates)
-        
+
         return (new_model, new_opt_state), loss
-    
+
     # Initialize state
     state = (model, opt_state)
-    
+
     # Training loop
     data_iter = iter(data_generator)
     losses = []
@@ -170,28 +208,26 @@ def optimize(model, data_generator, steps=10_000, print_freq=100, learning_rate=
             batch = next(data_iter)
             state, loss = train_step(state, batch)
             losses.append(loss)
-            
+
             if step % print_freq == 0 or (step + 1 == steps):
                 t.set_postfix(
                     loss=loss.item() / model.n_instance,
                 )
-    
+
     trained_model = state[0]
     return trained_model, losses
 
 
 if __name__ == "__main__":
-    # %% [markdown]
-    # Let's run the first experiment
-
-    # %%
     config = Config(n_instances=10, n_features=5, n_hidden=2)
 
     model = Model.from_config(config=config)
 
     axis = (0, 2)
     probability = jnp.expand_dims(0.9 ** jnp.arange(config.n_instances), axis=axis)
-    importance = jnp.expand_dims(20 ** -jnp.linspace(0, 1, config.n_instances), axis=axis)
+    importance = jnp.expand_dims(
+        20 ** -jnp.linspace(0, 1, config.n_instances), axis=axis
+    )
 
     data_generator = DataGenerator(
         n_features=config.n_features,
@@ -202,5 +238,3 @@ if __name__ == "__main__":
     )
 
     model_optimized = optimize(model=model, data_generator=data_generator)
-
-    # %%
