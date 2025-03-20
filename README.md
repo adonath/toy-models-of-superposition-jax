@@ -1,6 +1,6 @@
 # Toy Models of Superposition: Replication in JAX
 
-This repository contains a replication of Antropic's "Toy Models of Superposition" in JAX.
+This repository contains a replication of Anthropic's "Toy Models of Superposition" in JAX.
 
 The original code can be found here: https://github.com/anthropics/toy-models-of-superposition/tree/main
 
