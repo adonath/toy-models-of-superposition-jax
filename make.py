@@ -10,6 +10,8 @@ import jax
 import optax
 from jax import numpy as jnp
 from jax.tree_util import register_dataclass
+from safetensors import safe_open
+from safetensors.flax import save_file
 from tqdm.autonotebook import trange
 
 log = logging.getLogger(__file__)
@@ -19,6 +21,9 @@ PATH_BASE = Path(__file__).parent
 
 def define_registry(registry):
     """Define registry"""
+    # allow reverse "two way" access of items
+    for key, item in registry.items():
+        registry[item] = key
 
     def get_with_error(key):
         if key not in registry:
@@ -131,11 +136,27 @@ class Model:
         return out
 
     @classmethod
-    def read(cls, filename):
-        pass
+    def read(cls, filename, device=None):
+        """Read model from safetensors file"""
+
+        with safe_open(filename, framework="flax", device=device) as f:
+            # reorder according to metadata, which maps index to key / path
+            data = {key: f.get_tensor(key) for key in f.keys()}
+            data["activation"] = get_activation(f.metadata()["activation"])
+
+        return cls(**data)
 
     def write(self, filename):
-        pass
+        """Write model to safetensors file"""
+        data = {
+            "w": self.w,
+            "b_final": self.b_final,
+        }
+
+        metadata = {"activation": get_activation(self.activation)}
+
+        log.info(f"Writing {filename}")
+        save_file(data, filename, metadata=metadata)
 
 
 @dataclass

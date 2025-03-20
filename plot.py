@@ -4,18 +4,23 @@ from matplotlib import collections as mc
 from matplotlib import colors as mcolors
 
 
-def plot_intro_diagram(model, config):
+def plot_intro_diagram(config):
     """Plot intro diagram"""
+    from .make import Model
+
+    model = Model.read(config.result_filename)
     WA = model.W.detach()
-    sel = range(config.n_instances)  # can be used to highlight specific sparsity levels
+
     plt.rcParams["axes.prop_cycle"] = plt.cycler(
         "color", plt.cm.viridis(model.importance[0].cpu().numpy())
     )
     plt.rcParams["figure.dpi"] = 200
-    fig, axs = plt.subplots(1, len(sel), figsize=(2 * len(sel), 2))
 
-    for i, ax in zip(sel, axs):
-        W = WA[i].cpu().detach().numpy()
+    n_rows = config.n_instances
+    fig, axes = plt.subplots(1, rows=n_rows, figsize=(2 * n_rows, 2))
+
+    for idx, ax in enumerate(axes):
+        W = WA[idx].cpu().detach().numpy()
         colors = [
             mcolors.to_rgba(c)
             for c in plt.rcParams["axes.prop_cycle"].by_key()["color"]
