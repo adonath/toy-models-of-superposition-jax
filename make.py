@@ -83,6 +83,17 @@ class Config:
     feature_probability: jax.Array = field(default_factory=lambda: jnp.ones(1))
     feature_importance: jax.Array = field(default_factory=lambda: jnp.ones(1))
 
+    def __post_init__(self):
+        if len(self.feature_importance) not in [1, self.n_instances]:
+            raise ValueError(
+                f"Feature importance requires length of 1 or {self.n_instances}"
+            )
+
+        if len(self.feature_probability) not in [1, self.n_instances]:
+            raise ValueError(
+                f"Feature probability requires length of 1 or {self.n_instances}"
+            )
+
     def key(self):
         """JAX random key"""
         return jax.random.key(self.seed)
