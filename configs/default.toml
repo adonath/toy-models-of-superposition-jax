@@ -2,4 +2,4 @@ n_instances=10
 n_features=5
 n_hidden=2
 feature_importance=[1.0, 0.9, 0.81, 0.729, 0.6561]
-feature_probability=[1.0, 0.47, 0.22, 0.11, 0.05]
+feature_probability=[1.0000, 0.7169, 0.5139, 0.3684, 0.2641, 0.1893, 0.1357, 0.0973, 0.0697, 0.0500]
