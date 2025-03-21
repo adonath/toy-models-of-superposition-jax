@@ -20,3 +20,11 @@ uv run make.py plot --config configs/varying-sparsity.toml --plot-type superposi
 ```
 
 ## Results
+
+### Intro Figure
+
+![intro-figure](images/features-5-hidden-2-instances-10-relu-intro.png)
+
+### Superposition
+
+![superposition](images/features-20-hidden-5-instances-7-relu-superposition.png)
