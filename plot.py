@@ -10,7 +10,7 @@ log = logging.getLogger(__file__)
 DPI = 300
 
 
-def plot_intro_diagram(model, config, filename):
+def plot_intro_diagram(model, config, filename, n_cols=5):
     """Plot intro diagram"""
     WA = model.w
 
@@ -18,10 +18,12 @@ def plot_intro_diagram(model, config, filename):
         "color", plt.cm.viridis(np.squeeze(config.feature_importance))
     )
 
-    n_cols = model.n_instance
-    fig, axes = plt.subplots(1, ncols=n_cols, figsize=(2 * n_cols, 2))
+    n_rows = model.n_instance // n_cols
+    fig, axes = plt.subplots(
+        nrows=n_rows, ncols=n_cols, figsize=(2 * n_cols, 2 * n_rows)
+    )
 
-    for idx, ax in enumerate(axes):
+    for idx, ax in enumerate(axes.flat):
         W = WA[idx]
         colors = [
             mcolors.to_rgba(c)

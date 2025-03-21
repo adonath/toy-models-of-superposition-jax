@@ -1,7 +1,6 @@
 import logging
 import tomllib
 from dataclasses import dataclass, field
-from enum import Enum
 from functools import partial
 from pathlib import Path
 
@@ -45,20 +44,20 @@ ACTIVATION = {"relu": jax.nn.relu, "gelu": jax.nn.gelu}
 get_activation = define_registry(ACTIVATION)
 
 INIT = {
-    "xavier-normal": jax.nn.initializers.glorot_normal(),
+    "xavier-normal": jax.nn.initializers.glorot_normal(in_axis=-2, out_axis=-1),
     "zeros": lambda key, shape, dtype: jnp.zeros(shape, dtype=dtype),
 }
 
 get_init = define_registry(INIT)
 
 
-class Axis(int, Enum):
-    """Axis convention"""
+# class Axis(int, Enum):
+#     """Axis convention"""
 
-    batch = 0
-    instance = 1
-    hidden = 2
-    feature = 3
+#     batch = 0
+#     instance = 1
+#     hidden = 2
+#     feature = 3
 
 
 def validate_key(data, key, validator):
@@ -77,7 +76,7 @@ class Config:
     activation: str = "relu"
     w_init: str = "xavier-normal"
     b_init: str = "zeros"
-    seed: int = 8723
+    seed: int = 923836
     device: str = "cpu"
     dtype: jnp.dtype = jnp.float32
     feature_probability: jax.Array = field(default_factory=lambda: jnp.ones(1))
@@ -135,7 +134,7 @@ class Model:
     @property
     def n_instance(self):
         """Number of instances"""
-        return self.w.shape[Axis.instance]
+        return self.w.shape[0]
 
     @classmethod
     def from_config(cls, config):
@@ -218,7 +217,7 @@ class DataGenerator:
         key = self.key
 
         while True:
-            n_instances = self.feature_probability.shape[Axis.instance]
+            n_instances = self.feature_probability.shape[1]
             shape = (self.batch_size, n_instances, self.n_features)
 
             key, subkey = jax.random.split(key)
@@ -231,11 +230,9 @@ class DataGenerator:
 
 
 def loss_fn(model, x, importance):
-    """Calculate MSE loss"""
-    y_pred = model(x)
-    error = importance * (jnp.abs(x) - y_pred) ** 2
+    """Calculate weighted MSE loss"""
+    error = importance * (jnp.abs(x) - model(x)) ** 2
     loss = einops.reduce(error, "b i f -> i", "mean").sum()
-    # return jnp.mean(importance * (y_pred - x) ** 2, axis=(Axis.batch, Axis.hidden, Axis.feature)).sum()
     return loss
 
 
