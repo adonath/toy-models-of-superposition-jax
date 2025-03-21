@@ -83,7 +83,7 @@ def plot_features(ax, w, b_final, config, show_y_label=False):
     ax.set_yticks([])
 
     ax.set_title("$\|W_i\|$", loc="left")
-    ax.set_facecolor(3 * (0.9,))
+    ax.set_facecolor(3 * (0.95,))
 
     if show_y_label:
         ax.set_ylabel("$\\leftarrow $ Features", loc="top")
@@ -92,20 +92,30 @@ def plot_features(ax, w, b_final, config, show_y_label=False):
 def plot_demonstrate_superposition(model, config, filename):
     """Plot demonstrate superposition"""
 
-    idxs = [1, 3, 6, 10, 12, 15, 19]
+    idxs = list(range(config.n_instances))
     n_cols = len(idxs)
 
     fig = plt.figure(figsize=(12, 6))
 
-    gs = GridSpec(nrows=3, ncols=n_cols, figure=fig)
+    gs = GridSpec(
+        nrows=3, ncols=n_cols, figure=fig, top=0.85, bottom=0.01, left=0.03, right=0.99
+    )
 
-    for idx in range(n_cols):
+    for idx in idxs:
         ax_w = fig.add_subplot(gs[0, idx])
         plot_w_and_b(ax_w, model.w[idx], model.b_final[idx])
 
         ax_f = fig.add_subplot(gs[1:, idx])
         plot_features(
             ax_f, model.w[idx], model.b_final[idx], config=config, show_y_label=idx == 0
+        )
+
+        fig.text(
+            x=0.03 + idx * 0.14,
+            y=0.9,
+            s=f"1 - S = {config.feature_probability[idx]:.3f}",
+            fontdict={"size": 12},
+            ha="left",
         )
 
     fig.suptitle(
