@@ -7,24 +7,22 @@ from matplotlib import colors as mcolors
 
 log = logging.getLogger(__file__)
 
+DPI = 300
 
-def plot_intro_diagram(config):
+
+def plot_intro_diagram(model, config, filename):
     """Plot intro diagram"""
-    from .make import Model
-
-    model = Model.read(config.result_filename)
-    WA = model.W.detach()
+    WA = model.w
 
     plt.rcParams["axes.prop_cycle"] = plt.cycler(
-        "color", plt.cm.viridis(model.importance[0].cpu().numpy())
+        "color", plt.cm.viridis(np.squeeze(config.feature_importance))
     )
-    plt.rcParams["figure.dpi"] = 200
 
-    n_rows = config.n_instances
-    fig, axes = plt.subplots(1, rows=n_rows, figsize=(2 * n_rows, 2))
+    n_cols = model.n_instance
+    fig, axes = plt.subplots(1, ncols=n_cols, figsize=(2 * n_cols, 2))
 
     for idx, ax in enumerate(axes):
-        W = WA[idx].cpu().detach().numpy()
+        W = WA[idx]
         colors = [
             mcolors.to_rgba(c)
             for c in plt.rcParams["axes.prop_cycle"].by_key()["color"]
@@ -48,3 +46,6 @@ def plot_intro_diagram(config):
 
         for spine in ["bottom", "left"]:
             ax.spines[spine].set_position("center")
+
+    log.info(f"Writing {filename}")
+    plt.savefig(filename, dpi=DPI)

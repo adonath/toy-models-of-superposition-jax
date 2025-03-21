@@ -15,15 +15,19 @@ from safetensors import safe_open
 from safetensors.flax import save_file
 from tqdm.autonotebook import trange
 
+from plot import plot_intro_diagram
+
 log = logging.getLogger(__file__)
+logging.basicConfig(level=logging.INFO)
 
 PATH_BASE = Path(__file__).parent
+PATH_RESULTS = PATH_BASE / "results"
 
 
 def define_registry(registry):
     """Define registry"""
     # allow reverse "two way" access of items
-    for key, item in registry.items():
+    for key, item in list(registry.items()):
         registry[item] = key
 
     def get_with_error(key):
@@ -76,8 +80,8 @@ class Config:
     seed: int = 87234
     device: str = "cpu"
     dtype: jnp.dtype = jnp.float32
-    feature_probability: jax.Array = field(default_factory=lambda _: jnp.ones(1))
-    feature_importance: jax.Array = field(default_factory=lambda _: jnp.ones(1))
+    feature_probability: jax.Array = field(default_factory=lambda: jnp.ones(1))
+    feature_importance: jax.Array = field(default_factory=lambda: jnp.ones(1))
 
     def key(self):
         """JAX random key"""
@@ -86,11 +90,12 @@ class Config:
     @property
     def result_filename(self):
         """Result filename for a given config"""
-        return f"n-features-{self.n_features}"
+        return f"features-{self.n_features}-hidden-{self.n_hidden}-instances-{self.n_instances}"
 
     @classmethod
     def read(cls, filename):
         """Read config from a TOML file"""
+        log.info(f"Reading {filename}")
 
         with open(filename, "rb") as f:
             data = tomllib.load(f)
@@ -140,11 +145,14 @@ class Model:
     def read(cls, filename, device=None):
         """Read model from safetensors file"""
 
+        log.info(f"Reading {filename}")
+
         with safe_open(filename, framework="flax", device=device) as f:
             # reorder according to metadata, which maps index to key / path
             data = {key: f.get_tensor(key) for key in f.keys()}
             data["activation"] = get_activation(f.metadata()["activation"])
 
+        data.pop("losses")
         return cls(**data)
 
     def write(self, filename, extra=None, meta_extra=None):
@@ -177,11 +185,8 @@ class DataGenerator:
     def from_config(cls, config):
         """Create from config object"""
         axis = (0, 2)
-
-        probability = jnp.expand_dims(0.9 ** jnp.arange(config.n_instances), axis=axis)
-        importance = jnp.expand_dims(
-            20 ** -jnp.linspace(0, 1, config.n_instances), axis=axis
-        )
+        probability = jnp.expand_dims(config.feature_probability, axis=axis)
+        importance = jnp.expand_dims(config.feature_importance, axis=axis)
 
         return cls(
             n_features=config.n_features,
@@ -261,10 +266,15 @@ def optimize(model, data_generator, n_steps=10_000, print_freq=100, learning_rat
     return trained_model, jnp.array(losses)
 
 
-@click.command()
+@click.group()
+def cli():
+    pass
+
+
+@cli.command("train")
 @click.option(
     "--config",
-    type=click.Path,
+    type=click.Path(),
     help="Path to config TOML file",
     default=PATH_BASE / "configs/default.toml",
 )
@@ -277,7 +287,7 @@ def optimize(model, data_generator, n_steps=10_000, print_freq=100, learning_rat
 @click.option(
     "--print-freq", type=int, help="Frequency of printing progress", default=100
 )
-def cli(config, learning_rate, n_steps, print_freq):
+def cli_train(config, learning_rate, n_steps, print_freq):
     """Train a toy model"""
     config = Config.read(config)
 
@@ -296,12 +306,27 @@ def cli(config, learning_rate, n_steps, print_freq):
 
     kwargs["config"] = config
     # Save the optimized model
-    output_path = PATH_BASE / "results" / f"{config.result_filename}.safetensors"
+    output_path = PATH_RESULTS / f"{config.result_filename}.safetensors"
     model_optimized.write(
         output_path,
         extra={"losses": losses},
         meta_extra={key: str(value) for key, value in kwargs.items()},
     )
+
+
+@cli.command("plot")
+@click.option(
+    "--config",
+    type=click.Path(),
+    help="Path to config TOML file",
+    default=PATH_BASE / "configs/default.toml",
+)
+def cli_plot(config):
+    config = Config.read(config)
+    model = Model.read(PATH_RESULTS / f"{config.result_filename}.safetensors")
+
+    output_path = PATH_RESULTS / f"{config.result_filename}.png"
+    plot_intro_diagram(model=model, config=config, filename=output_path)
 
 
 if __name__ == "__main__":
