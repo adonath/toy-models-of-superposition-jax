@@ -77,22 +77,28 @@ class Config:
     activation: str = "relu"
     w_init: str = "xavier-normal"
     b_init: str = "zeros"
-    seed: int = 87234
+    seed: int = 8723
     device: str = "cpu"
     dtype: jnp.dtype = jnp.float32
     feature_probability: jax.Array = field(default_factory=lambda: jnp.ones(1))
     feature_importance: jax.Array = field(default_factory=lambda: jnp.ones(1))
 
     def __post_init__(self):
-        if len(self.feature_importance) not in [1, self.n_instances]:
-            raise ValueError(
-                f"Feature importance requires length of 1 or {self.n_instances}"
+        if len(self.feature_importance) not in [1, self.n_features]:
+            message = (
+                f"Feature importance requires length of 1 or {self.n_features}, "
+                f"got length of {len(self.feature_importance)}"
             )
 
+            raise ValueError(message)
+
         if len(self.feature_probability) not in [1, self.n_instances]:
-            raise ValueError(
-                f"Feature probability requires length of 1 or {self.n_instances}"
+            message = (
+                f"Feature probability requires length of 1 or {self.n_instances}, "
+                f"got length of {len(self.feature_probability)}"
             )
+
+            raise ValueError(message)
 
     def key(self):
         """JAX random key"""
@@ -146,6 +152,7 @@ class Model:
         return cls(w=w, b_final=b_final, activation=activation)
 
     def __call__(self, x):
+        # TODO: check whether regular matmul improves performance
         hidden = jnp.einsum("...if,ifh->...ih", x, self.w)
         out = jnp.einsum("...ih,ifh->...if", hidden, self.w)
         out = out + self.b_final
@@ -195,9 +202,8 @@ class DataGenerator:
     @classmethod
     def from_config(cls, config):
         """Create from config object"""
-        axis = (0, 2)
-        probability = jnp.expand_dims(config.feature_probability, axis=axis)
-        importance = jnp.expand_dims(config.feature_importance, axis=axis)
+        probability = jnp.expand_dims(config.feature_probability, axis=(0, 2))
+        importance = jnp.expand_dims(config.feature_importance, axis=(0, 1))
 
         return cls(
             n_features=config.n_features,
@@ -219,11 +225,8 @@ class DataGenerator:
             features = jax.random.uniform(key=subkey, shape=shape)
 
             key, subkey = jax.random.split(key)
-            sparsify = jax.random.bernoulli(
-                key=subkey, p=self.feature_probability, shape=shape
-            )
-
-            features = features.at[sparsify].set(0)
+            helper = jax.random.uniform(key=subkey, shape=features.shape)
+            features = jnp.where(helper <= self.feature_probability, features, 0)
             yield features
 
 
@@ -333,6 +336,7 @@ def cli_train(config, learning_rate, n_steps, print_freq):
     default=PATH_BASE / "configs/default.toml",
 )
 def cli_plot(config):
+    """Make plots from trained models"""
     config = Config.read(config)
     model = Model.read(PATH_RESULTS / f"{config.result_filename}.safetensors")
 
