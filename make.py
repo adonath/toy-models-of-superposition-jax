@@ -5,6 +5,7 @@ from enum import Enum
 from functools import partial
 from pathlib import Path
 
+import click
 import einops
 import jax
 import optax
@@ -146,14 +147,16 @@ class Model:
 
         return cls(**data)
 
-    def write(self, filename):
+    def write(self, filename, extra=None, meta_extra=None):
         """Write model to safetensors file"""
-        data = {
-            "w": self.w,
-            "b_final": self.b_final,
-        }
+        extra = {} if extra is None else extra
+        meta_extra = {} if meta_extra is None else meta_extra
+
+        data = {"w": self.w, "b_final": self.b_final}
+        data.update(extra)
 
         metadata = {"activation": get_activation(self.activation)}
+        metadata.update(meta_extra)
 
         log.info(f"Writing {filename}")
         save_file(data, filename, metadata=metadata)
@@ -169,6 +172,25 @@ class DataGenerator:
     batch_size: int
     key: jax.Array
     device: str = "cpu"
+
+    @classmethod
+    def from_config(cls, config):
+        """Create from config object"""
+        axis = (0, 2)
+
+        probability = jnp.expand_dims(0.9 ** jnp.arange(config.n_instances), axis=axis)
+        importance = jnp.expand_dims(
+            20 ** -jnp.linspace(0, 1, config.n_instances), axis=axis
+        )
+
+        return cls(
+            n_features=config.n_features,
+            feature_probability=probability,
+            feature_importance=importance,
+            batch_size=1024,
+            key=config.key(),
+            device=config.device,
+        )
 
     def __iter__(self):
         key = self.key
@@ -198,7 +220,7 @@ def loss_fn(model, x, importance):
     return loss
 
 
-def optimize(model, data_generator, steps=10_000, print_freq=100, learning_rate=1e-3):
+def optimize(model, data_generator, n_steps=10_000, print_freq=100, learning_rate=1e-3):
     """Optimize model"""
     # Initialize optimizer
     optimizer = optax.adamw(learning_rate=learning_rate)
@@ -224,38 +246,63 @@ def optimize(model, data_generator, steps=10_000, print_freq=100, learning_rate=
     data_iter = iter(data_generator)
     losses = []
 
-    with trange(steps) as t:
+    with trange(n_steps) as t:
         for step in t:
             batch = next(data_iter)
             state, loss = train_step(state, batch)
             losses.append(loss)
 
-            if step % print_freq == 0 or (step + 1 == steps):
+            if step % print_freq == 0 or (step + 1 == n_steps):
                 t.set_postfix(
                     loss=loss.item() / model.n_instance,
                 )
 
     trained_model = state[0]
-    return trained_model, losses
+    return trained_model, jnp.array(losses)
+
+
+@click.command()
+@click.option(
+    "--config",
+    type=click.Path,
+    help="Path to config TOML file",
+    default=PATH_BASE / "configs/default.toml",
+)
+@click.option(
+    "--learning-rate", type=float, help="Learning rate for optimization", default=1e-3
+)
+@click.option(
+    "--n-steps", type=int, help="Number of optimization steps", default=10_000
+)
+@click.option(
+    "--print-freq", type=int, help="Frequency of printing progress", default=100
+)
+def cli(config, learning_rate, n_steps, print_freq):
+    """Train a toy model"""
+    config = Config.read(config)
+
+    model = Model.from_config(config=config)
+    data_generator = DataGenerator.from_config(config=config)
+
+    kwargs = {
+        "learning_rate": learning_rate,
+        "n_steps": n_steps,
+        "print_freq": print_freq,
+    }
+
+    model_optimized, losses = optimize(
+        model=model, data_generator=data_generator, **kwargs
+    )
+
+    kwargs["config"] = config
+    # Save the optimized model
+    output_path = PATH_BASE / "results" / f"{config.result_filename}.safetensors"
+    model_optimized.write(
+        output_path,
+        extra={"losses": losses},
+        meta_extra={key: str(value) for key, value in kwargs.items()},
+    )
 
 
 if __name__ == "__main__":
-    config = Config(n_instances=10, n_features=5, n_hidden=2)
-
-    model = Model.from_config(config=config)
-
-    axis = (0, 2)
-    probability = jnp.expand_dims(0.9 ** jnp.arange(config.n_instances), axis=axis)
-    importance = jnp.expand_dims(
-        20 ** -jnp.linspace(0, 1, config.n_instances), axis=axis
-    )
-
-    data_generator = DataGenerator(
-        n_features=config.n_features,
-        feature_probability=probability,
-        feature_importance=importance,
-        batch_size=1024,
-        key=jax.random.key(98923),
-    )
-
-    model_optimized = optimize(model=model, data_generator=data_generator)
+    cli()

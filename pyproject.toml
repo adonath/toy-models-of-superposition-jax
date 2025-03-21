@@ -5,6 +5,7 @@ description = "A replication of Antropic's 'Toy Models of Superposition' in JAX"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "click>=8.1.8",
     "einops>=0.8.1",
     "ipykernel>=6.29.5",
     "jax>=0.4.0",

@@ -1,7 +1,11 @@
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import collections as mc
 from matplotlib import colors as mcolors
+
+log = logging.getLogger(__file__)
 
 
 def plot_intro_diagram(config):
