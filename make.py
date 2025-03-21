@@ -14,7 +14,7 @@ from safetensors import safe_open
 from safetensors.flax import save_file
 from tqdm.autonotebook import trange
 
-from plot import plot_intro_diagram
+from plot import plot_demonstrate_superposition, plot_intro_diagram
 
 log = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -328,6 +328,12 @@ def cli_train(config, learning_rate, n_steps, print_freq):
     )
 
 
+PLOT_TYPES = {
+    "intro": plot_intro_diagram,
+    "superposition": plot_demonstrate_superposition,
+}
+
+
 @cli.command("plot")
 @click.option(
     "--config",
@@ -335,13 +341,19 @@ def cli_train(config, learning_rate, n_steps, print_freq):
     help="Path to config TOML file",
     default=PATH_BASE / "configs/default.toml",
 )
-def cli_plot(config):
+@click.option(
+    "--plot-type",
+    type=click.Choice(PLOT_TYPES.keys()),
+    help="Choose plot type",
+    default="intro",
+)
+def cli_plot(config, plot_type):
     """Make plots from trained models"""
     config = Config.read(config)
     model = Model.read(PATH_RESULTS / f"{config.result_filename}.safetensors")
+    output_path = PATH_RESULTS / f"{config.result_filename}-{plot_type}.png"
 
-    output_path = PATH_RESULTS / f"{config.result_filename}.png"
-    plot_intro_diagram(model=model, config=config, filename=output_path)
+    PLOT_TYPES[plot_type](model=model, config=config, filename=output_path)
 
 
 if __name__ == "__main__":

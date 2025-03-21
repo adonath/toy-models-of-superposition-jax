@@ -15,4 +15,8 @@ I would recommeend to use `uv`, which will automatically detect the `uv.lock` fi
 uv run make.py
 ```
 
+```bash
+uv run make.py plot --config configs/varying-sparsity.toml --plot-type superposition
+```
+
 ## Results
