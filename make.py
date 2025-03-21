@@ -39,7 +39,7 @@ def define_registry(registry):
     return get_with_error
 
 
-ACTIVATION = {"relu": jax.nn.relu, "gelu": jax.nn.gelu}
+ACTIVATION = {"relu": jax.nn.relu, "gelu": jax.nn.gelu, "identity": lambda x: x}
 
 get_activation = define_registry(ACTIVATION)
 
@@ -105,7 +105,7 @@ class Config:
     @property
     def result_filename(self):
         """Result filename for a given config"""
-        return f"features-{self.n_features}-hidden-{self.n_hidden}-instances-{self.n_instances}"
+        return f"features-{self.n_features}-hidden-{self.n_hidden}-instances-{self.n_instances}-{self.activation}"
 
     @classmethod
     def read(cls, filename):
