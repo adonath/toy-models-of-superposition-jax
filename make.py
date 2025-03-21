@@ -57,6 +57,14 @@ def validate_key(data, key, validator):
         data[key] = validator(data[key])
 
 
+def validate_array(value, n):
+    """Validate array"""
+    if isinstance(value, dict):
+        return value["lambda"] ** -jnp.linspace(0, 1, n)
+
+    return jnp.array(value)
+
+
 @dataclass
 class Config:
     """Toy model config"""
@@ -108,8 +116,12 @@ class Config:
             data = tomllib.load(f)
 
         validate_key(data, "dtype", lambda _: getattr(jnp, _))
-        validate_key(data, "feature_probability", jnp.array)
-        validate_key(data, "feature_importance", jnp.array)
+        validate_key(
+            data, "feature_probability", partial(validate_array, n=data["n_instances"])
+        )
+        validate_key(
+            data, "feature_importance", partial(validate_array, n=data["n_features"])
+        )
         return cls(**data)
 
 

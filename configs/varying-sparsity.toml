@@ -1,0 +1,5 @@
+n_features = 100
+n_hidden = 20
+n_instances = 20
+feature_importance={lambda=100}
+feature_probability={lambda=20}
