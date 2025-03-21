@@ -51,15 +51,6 @@ INIT = {
 get_init = define_registry(INIT)
 
 
-# class Axis(int, Enum):
-#     """Axis convention"""
-
-#     batch = 0
-#     instance = 1
-#     hidden = 2
-#     feature = 3
-
-
 def validate_key(data, key, validator):
     """Validate a dict entry by applying a validator"""
     if key in data:

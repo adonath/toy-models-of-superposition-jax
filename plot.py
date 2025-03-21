@@ -7,6 +7,7 @@ from matplotlib import collections as mc
 log = logging.getLogger(__file__)
 
 DPI = 300
+FACECOLOR = "#FCFBF8"
 
 
 def plot_intro_diagram(model, config, filename, n_cols=5, z=1.5):
@@ -26,7 +27,7 @@ def plot_intro_diagram(model, config, filename, n_cols=5, z=1.5):
         ax.add_collection(mc.LineCollection(segments, colors=colors))
 
         ax.set_aspect("equal")
-        ax.set_facecolor("#FCFBF8")
+        ax.set_facecolor(FACECOLOR)
         ax.set_xlim((-z, z))
         ax.set_ylim((-z, z))
         ax.tick_params(
