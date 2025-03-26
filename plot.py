@@ -60,7 +60,7 @@ def plot_w_and_b(ax, w, b_final):
     ax_b.set_title("b")
 
 
-def plot_features(ax, w, b_final, config, show_y_label=False):
+def plot_features(ax, w, config, show_y_label=False):
     """Plot features"""
     w_norm = w / (1e-5 + np.linalg.norm(w, 2, axis=-1, keepdims=True))
 
@@ -128,3 +128,43 @@ def plot_demonstrate_superposition(model, config, filename):
 
     plt.tight_layout()
     fig.savefig(filename, dpi=DPI)
+
+
+def plot_norm_vs_sparsity(model, config, filename):
+    """Plot weights norm vs sparsity"""
+    fig = plt.figure(figsize=(8, 4.5))
+    ax = fig.add_subplot()
+
+    x = 1 / config.feature_probability
+    y = config.n_hidden / (np.linalg.matrix_norm(model.w, ord="fro") ** 2)
+
+    ax.scatter(x, y, zorder=1)
+    ax.plot(x, y, zorder=2)
+    ax.set_xscale("log")
+
+    ax.set_facecolor(FACECOLOR)
+    ax.set_xlabel("1/(1-S)")
+    ax.set_ylabel("$m / \|W\|_F^2$")
+
+    log.info(f"Writing {filename}")
+
+    ax.grid(axis="y", zorder=0, lw=0.5)
+
+    plt.tight_layout()
+    fig.savefig(filename, dpi=DPI)
+
+
+def compute_dimensionality(w):
+    """Compute dimensionality"""
+    norms = np.linalg.norm(w, 2, axis=-1)
+    w_unit = w / np.clip(norms[:, :, None], 1e-6, np.inf)
+
+    interferences = (np.einsum("eah,ebh->eab", w_unit, w) ** 2).sum(axis=-1)
+
+    dim_fracs = norms**2 / interferences
+    return dim_fracs
+
+
+def plot_feature_geometry():
+    """Plot feature geometry"""
+    pass
