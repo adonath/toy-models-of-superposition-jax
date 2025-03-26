@@ -14,7 +14,11 @@ from safetensors import safe_open
 from safetensors.flax import save_file
 from tqdm.autonotebook import trange
 
-from plot import plot_demonstrate_superposition, plot_intro_diagram
+from plot import (
+    plot_demonstrate_superposition,
+    plot_intro_diagram,
+    plot_norm_vs_sparsity,
+)
 
 log = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -127,7 +131,6 @@ class Config:
             data = tomllib.load(f)
 
         # TODO: could use Pydantic here...
-        validate_key()
         validate_key(data, "dtype", lambda _: getattr(jnp, _))
         validate_key(
             data, "feature_probability", partial(validate_array, n=data["n_instances"])
@@ -344,6 +347,7 @@ def cli_train(config, learning_rate, n_steps, print_freq):
 PLOT_TYPES = {
     "intro": plot_intro_diagram,
     "superposition": plot_demonstrate_superposition,
+    "norm-sparsity": plot_norm_vs_sparsity,
 }
 
 

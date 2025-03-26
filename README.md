@@ -24,7 +24,7 @@ uv run make.py plot --config configs/varying-sparsity.toml --plot-type superposi
 
 ## Results
 
-I can basically exactly(!) reproduce the figures shown in [1]
+I can basically exactly(!) reproduce the figures shown in [1]:
 
 ### Intro Figure
 
@@ -33,6 +33,9 @@ I can basically exactly(!) reproduce the figures shown in [1]
 ### Superposition
 
 ![superposition](images/features-20-hidden-5-instances-7-relu-superposition.png)
+
+### Feature Dimensionality
+![feature-dimensionality](images/features-200-hidden-20-instances-20-relu-norm-sparsity.png)
 
 
 ## References
