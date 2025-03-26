@@ -1,6 +1,6 @@
 # Toy Models of Superposition: Replication in JAX
 
-This repository contains a replication of Anthropic's "Toy Models of Superposition" in JAX [1, 2].
+This repository contains a replication of Anthropic's "Toy Models of Superposition" in JAX [^1][^2].
 
 I made the JAX implementation a bit more scalable and flexible than a single notebook. This includes:
 
@@ -24,7 +24,7 @@ uv run make.py plot --config configs/varying-sparsity.toml --plot-type superposi
 
 ## Results
 
-I can basically exactly(!) reproduce the figures shown in [1]:
+I can basically exactly(!) reproduce the figures shown in [^1]:
 
 ### Intro Figure
 
@@ -40,5 +40,5 @@ I can basically exactly(!) reproduce the figures shown in [1]:
 
 ## References
 
-_[1]: https://transformer-circuits.pub/2022/toy_model/index.html
-_[2]: https://github.com/anthropics/toy-models-of-superposition/tree/main
+[^1]: https://transformer-circuits.pub/2022/toy_model/index.html
+[^2]: https://github.com/anthropics/toy-models-of-superposition/tree/main
