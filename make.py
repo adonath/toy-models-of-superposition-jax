@@ -51,6 +51,14 @@ INIT = {
 get_init = define_registry(INIT)
 
 
+GRID_INIT = {
+    "exp-beta": lambda n, beta: beta ** -jnp.linspace(0, 1, n),
+    "exp-alpha": lambda n, alpha: alpha ** jnp.arange(n),
+}
+
+get_array_grid = define_registry(GRID_INIT)
+
+
 def validate_key(data, key, validator):
     """Validate a dict entry by applying a validator"""
     if key in data:
@@ -58,9 +66,12 @@ def validate_key(data, key, validator):
 
 
 def validate_array(value, n):
-    """Validate array"""
+    """Validate array
+
+    The value is either tried to cast as a jax.Array or a new array is created from configuration.
+    """
     if isinstance(value, dict):
-        return value["lambda"] ** -jnp.linspace(0, 1, n)
+        return get_array_grid(value.pop("grid"))(n, **value)
 
     return jnp.array(value)
 
@@ -115,6 +126,8 @@ class Config:
         with open(filename, "rb") as f:
             data = tomllib.load(f)
 
+        # TODO: could use Pydantic here...
+        validate_key()
         validate_key(data, "dtype", lambda _: getattr(jnp, _))
         validate_key(
             data, "feature_probability", partial(validate_array, n=data["n_instances"])
