@@ -15,10 +15,10 @@ from safetensors.flax import save_file
 from tqdm.autonotebook import trange
 
 from plot import (
-    plot_demonstrate_superposition,
     plot_feature_geometry,
     plot_intro_diagram,
     plot_norm_vs_sparsity,
+    plot_superposition,
 )
 
 log = logging.getLogger(__file__)
@@ -347,9 +347,9 @@ def cli_train(config, learning_rate, n_steps, print_freq):
 
 PLOT_TYPES = {
     "intro": plot_intro_diagram,
-    "superposition": plot_demonstrate_superposition,
+    "superposition": plot_superposition,
     "norm-sparsity": plot_norm_vs_sparsity,
-    "feature-dimensionality": plot_feature_geometry,
+    "feature-geometry": plot_feature_geometry,
 }
 
 
@@ -358,7 +358,7 @@ PLOT_TYPES = {
     "--config",
     type=click.Path(),
     help="Path to config TOML file",
-    default=PATH_BASE / "configs/default.toml",
+    default=PATH_BASE / "configs/intro-figure.toml",
 )
 @click.option(
     "--plot-type",

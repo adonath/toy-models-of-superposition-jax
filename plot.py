@@ -89,7 +89,7 @@ def plot_features(ax, w, config, show_y_label=False):
         ax.set_ylabel("$\\leftarrow $ Features", loc="top")
 
 
-def plot_demonstrate_superposition(model, config, filename):
+def plot_superposition(model, config, filename):
     """Plot demonstrate superposition"""
 
     idxs = list(range(config.n_instances))

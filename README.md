@@ -12,14 +12,23 @@ I made the JAX implementation a bit more scalable and flexible than a single not
 
 ## Getting Started
 
-I would recommeend to use `uv`, which will automatically detect the `uv.lock` file and create and reproducible environment:
+I would recommend to use `uv`, which will automatically detect the `uv.lock` file and create and reproducible environment.
+
+To reproduce the figures below you can then use:
 
 ```bash
-uv run make.py
+uv run make.py train --config configs/intro-figure.toml
+uv run make.py plot --config configs/intro-figure.toml --plot-type intro
 ```
 
 ```bash
+uv run make.py train --config configs/varying-sparsity.toml
 uv run make.py plot --config configs/varying-sparsity.toml --plot-type superposition
+```
+
+```bash
+uv run make.py train --config configs/feature-geometry.toml
+uv run make.py plot --config configs/feature-geometry.toml --plot-type feature-geometry
 ```
 
 ## Results
