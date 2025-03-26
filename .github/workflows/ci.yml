@@ -24,6 +24,6 @@ jobs:
         - name: Run tests
           # For example, using `pytest`
           run: |
-              uv run make.py train --config configs/intro-figure.toml --n-step 1
-              uv run make.py train --config configs/feature-geometry.toml --n-step 1
-              uv run make.py train --config configs/varying-sparsity.toml --n-step 1
+              uv run make.py train --config configs/intro-figure.toml --n-steps 1
+              uv run make.py train --config configs/feature-geometry.toml --n-steps 1
+              uv run make.py train --config configs/varying-sparsity.toml --n-steps 1
