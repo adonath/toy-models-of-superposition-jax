@@ -16,6 +16,7 @@ from tqdm.autonotebook import trange
 
 from plot import (
     plot_demonstrate_superposition,
+    plot_feature_geometry,
     plot_intro_diagram,
     plot_norm_vs_sparsity,
 )
@@ -348,6 +349,7 @@ PLOT_TYPES = {
     "intro": plot_intro_diagram,
     "superposition": plot_demonstrate_superposition,
     "norm-sparsity": plot_norm_vs_sparsity,
+    "feature-dimensionality": plot_feature_geometry,
 }
 
 

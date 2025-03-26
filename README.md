@@ -34,8 +34,9 @@ I can basically exactly(!) reproduce the figures shown in [^1]:
 
 ![superposition](images/features-20-hidden-5-instances-7-relu-superposition.png)
 
+
 ### Feature Dimensionality
-![feature-dimensionality](images/features-200-hidden-20-instances-20-relu-norm-sparsity.png)
+![feature-dimensionality](images/features-200-hidden-20-instances-20-relu-feature-dimensionality.png)
 
 
 ## References

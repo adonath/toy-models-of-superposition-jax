@@ -124,9 +124,9 @@ def plot_demonstrate_superposition(model, config, filename):
         ha="left",
         x=0.03,
     )
-    log.info(f"Writing {filename}")
 
     plt.tight_layout()
+    log.info(f"Writing {filename}")
     fig.savefig(filename, dpi=DPI)
 
 
@@ -145,12 +145,11 @@ def plot_norm_vs_sparsity(model, config, filename):
     ax.set_facecolor(FACECOLOR)
     ax.set_xlabel("1/(1-S)")
     ax.set_ylabel("$m / \|W\|_F^2$")
-
-    log.info(f"Writing {filename}")
-
+    ax.set_ylim(0, 1)
     ax.grid(axis="y", zorder=0, lw=0.5)
 
     plt.tight_layout()
+    log.info(f"Writing {filename}")
     fig.savefig(filename, dpi=DPI)
 
 
@@ -165,6 +164,60 @@ def compute_dimensionality(w):
     return dim_fracs
 
 
-def plot_feature_geometry():
+def plot_feature_geometry(model, config, filename):
     """Plot feature geometry"""
-    pass
+    fig = plt.figure(figsize=(8, 4.5))
+    ax = fig.add_subplot()
+
+    ax.set_facecolor(FACECOLOR)
+
+    xmin, xmax = 0.9, 25
+    for a, b in [(1, 2), (2, 3), (2, 5), (2, 6), (2, 7)]:
+        y = a / b
+        ax.hlines(y, xmin=xmin, xmax=xmax, color="purple", alpha=0.2, lw=0.8)
+        ax.text(x=1, y=y, s=f"{a}/{b}", va="bottom", size=8, alpha=0.3)
+
+    for a, b in [(5, 6), (4, 5), (3, 4), (3, 8), (3, 12), (3, 20)]:
+        y = a / b
+        ax.hlines(y, xmin=xmin, xmax=xmax, color="blue", alpha=0.2, lw=0.8)
+        ax.text(x=20, y=y, s=f"{a}/{b}", va="bottom", size=8, alpha=0.3)
+
+    w = model.w
+    dim_fracs = compute_dimensionality(w)
+
+    density = config.feature_probability
+
+    xs = 1 / density
+    dx = np.append(np.diff(xs), 2.91)
+
+    violins = ax.violinplot(
+        list(dim_fracs),
+        positions=xs,
+        showextrema=False,
+        widths=0.6 * dx,
+    )
+
+    for _ in violins["bodies"]:
+        _.set(color="black", alpha=0.1, edgecolor="none")
+
+    dither = np.random.uniform(-0.1, 0.1, size=(1, config.n_features))
+    x = xs[:, None] + dx[:, None] * dither
+
+    ax.scatter(
+        x=x.flatten(),
+        y=dim_fracs.flatten(),
+        color="black",
+        alpha=0.3,
+        s=0.05,
+    )
+
+    ax.set_xscale("log")
+    ax.set_xlim(xmin, xmax)
+    ax.set_xlabel("1/(1-S)")
+
+    ax.set_ylabel("$m / \|W\|_F^2$")
+    ax.set_ylim(0, 0.9)
+
+    plt.tight_layout()
+    log.info(f"Writing {filename}")
+    fig.savefig(filename, dpi=DPI)
