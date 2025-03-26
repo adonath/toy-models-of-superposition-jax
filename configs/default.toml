@@ -1,5 +1,5 @@
 n_instances=10
 n_features=5
 n_hidden=2
-feature_importance={lambda=1.5241}
-feature_probability={lambda=20}
+feature_importance={grid="exp-beta", beta=1.5241}
+feature_probability={grid="exp-beta", beta=2}
